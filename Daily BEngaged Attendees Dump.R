@@ -9,13 +9,11 @@ library(writexl)
 library(knitr)
 library(gt)
 
-readRenviron("//bushare.binghamton.edu/assess/Shiny Apps/.Renviron.R")
-
 tryCatch({
   readRenviron("//bushare.binghamton.edu/assess/Shiny Apps/.Renviron.R")
   # --- Config ---
   today <- format(Sys.Date(), "%Y-%m-%d")
-  events_output_path <- paste0("//bushare.binghamton.edu/assess/Shared SAASI/Data Hub Development/B-Engaged Migration/B-Engaged Dumps/Daily Groups Dump/BEngaged Groups Pull_", today, ".csv")
+  events_output_path <- paste0("//bushare.binghamton.edu/assess/Shared SAASI/Data Hub Development/B-Engaged Migration/B-Engaged Dumps/Daily Events Dump/BEngaged Events Pull_", today, ".csv")
   attendance_output_path <- paste0("//bushare.binghamton.edu/assess/Shared SAASI/Data Hub Development/B-Engaged Migration/B-Engaged Dumps/Daily Attendees Dump/BEngaged Attendance Pull_", today, ".csv")
   token <- Sys.getenv("cg_token")  # Must be stored securely in .Renviron
   event_start_cutoff <- "2025-07-01"
@@ -68,10 +66,13 @@ tryCatch({
   attendees_df <- bind_rows(attendees_list) %>% as_tibble()
   
   # --- Step 3: Merge Attendee + Event Info ---
-  final_df <- attendees_df %>%
-    left_join(events_df %>% select(eventId, title, eventDate, fullDescription, eventLink, groupId, group, coHostedGroupIds), 
-              by = c("event_id" = "eventId")) %>%
+  final_df <- events_df %>% select(eventId, title, eventDate, fullDescription, eventLink, groupId, group, coHostedGroupIds) %>%
+    left_join(attendees_df, by = "eventId") %>%
     relocate(title, eventDate, fullDescription, eventLink)
+  # 
+  # final_df2 <-  attendees_df %>% 
+  #   left_join(events_df %>% select(eventId, title, eventDate, fullDescription, eventLink, groupId, group, coHostedGroupIds), by = c("event_id" = "eventId")) %>%
+  #   relocate(title, eventDate, fullDescription, eventLink)
   
   # --- Step 4: Write CSV Output ---
   write_csv(final_df, attendance_output_path)
