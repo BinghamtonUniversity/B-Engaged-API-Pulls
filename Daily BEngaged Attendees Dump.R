@@ -21,9 +21,8 @@ tryCatch({
   
   # --- Step 1: Pull Events After July 1 ---
   url <- paste0(
-    "https://bengaged.binghamton.edu/rss_events",
-    "?time_range=past",  # <-- Required to get past events
-    "&event_ends_after=", event_start_cutoff
+    "https://bengaged.binghamton.edu/rss_events",  # <-- Required to get past events
+    "?event_ends_after=", event_start_cutoff
   )
   
   response <- GET(url = url, add_headers("X-CG-API-Secret" = token))
