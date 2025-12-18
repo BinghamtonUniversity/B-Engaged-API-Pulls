@@ -15,14 +15,18 @@ tryCatch({
   today <- format(Sys.Date(), "%Y-%m-%d")
   events_output_path <- paste0("//bushare.binghamton.edu/assess/Shared SAASI/Data Hub Development/B-Engaged Migration/B-Engaged Dumps/Daily Events Dump/BEngaged Events Pull_", today, ".csv")
   attendance_output_path <- paste0("//bushare.binghamton.edu/assess/Shared SAASI/Data Hub Development/B-Engaged Migration/B-Engaged Dumps/Daily Attendees Dump/BEngaged Attendance Pull_", today, ".csv")
+  events_output_path_rds <- paste0("//bushare.binghamton.edu/assess/Shared SAASI/Data Hub Development/B-Engaged Migration/B-Engaged Dumps/Daily Events Dump RDS/BEngaged Events Pull_", today, ".rds")
+  attendance_output_path_rds <- paste0("//bushare.binghamton.edu/assess/Shared SAASI/Data Hub Development/B-Engaged Migration/B-Engaged Dumps/Daily Attendees Dump RDS/BEngaged Attendance Pull_", today, ".rds")
+  
   token <- Sys.getenv("cg_token")  # Must be stored securely in .Renviron
   event_start_cutoff <- "2025-07-01"
   event_end_cutoff <- "2024-12-15"
   
   # --- Step 1: Pull Events After July 1 ---
   url <- paste0(
-    "https://bengaged.binghamton.edu/rss_events",  # <-- Required to get past events
-    "?event_ends_after=", event_start_cutoff
+    "https://bengaged.binghamton.edu/rss_events",
+    "?time_range=all",
+    "&event_ends_after=", event_start_cutoff
   )
   
   response <- GET(url = url, add_headers("X-CG-API-Secret" = token))
@@ -65,9 +69,10 @@ tryCatch({
   attendees_df <- bind_rows(attendees_list) %>% as_tibble()
   
   # --- Step 3: Merge Attendee + Event Info ---
-  final_df <- events_df %>% select(eventId, title, eventDate, fullDescription, eventLink, groupId, group, coHostedGroupIds) %>%
+  final_df <- events_df %>% select(eventId, title, eventDate, fullDescription, eventLink, groupId, group, coHostedGroupIds, eventTime,eventEndTime,locationType,eventLocation,eventRoomName,eventType,start,end) %>%
+    mutate(Attendance = if_else(eventId %in% attendees_df$eventId, "Y", "N")) %>% 
     left_join(attendees_df, by = "eventId") %>%
-    relocate(title, eventDate, fullDescription, eventLink)
+    relocate(title, eventDate, fullDescription, eventLink, Attendance)
   # 
   # final_df2 <-  attendees_df %>% 
   #   left_join(events_df %>% select(eventId, title, eventDate, fullDescription, eventLink, groupId, group, coHostedGroupIds), by = c("event_id" = "eventId")) %>%
@@ -76,6 +81,9 @@ tryCatch({
   # --- Step 4: Write CSV Output ---
   write_csv(final_df, attendance_output_path)
   write_csv(events_df, events_output_path)
+  
+  saveRDS(final_df, attendance_output_path_rds)
+  saveRDS(events_df, events_output_path_rds)
   
   # --- Step 5: Build Summary Table for Email ---
   summary_table <- final_df %>%
@@ -93,8 +101,9 @@ tryCatch({
   # --- Step 6: Success Email ---
   email <- compose_email(
     body = html(paste0(
-      "<p>✅ B-Engaged attendee export completed successfully on ", Sys.Date(), ".</p>",
+      "<p>✅ B-Engaged attendee s and events export completed successfully on ", Sys.Date(), ".</p>",
       "<p><strong>Output file:</strong><br>", attendance_output_path, "</p>",
+      "<p><strong>Output RDS:</strong><br>", attendance_output_path_rds, "</p>",
       summary_html
     )),
     footer = "— Automated B-Engaged Script"

@@ -13,10 +13,13 @@ tryCatch({
   # --- CONFIG ---
   readRenviron("//bushare.binghamton.edu/assess/Shiny Apps/.Renviron.R")
   token <- Sys.getenv("cg_token")
-  timestamp <- format(Sys.Date(), "%Y-%m-%d")
+  today <- format(Sys.Date(), "%Y-%m-%d")
   
-  out_path_groups <- paste0("//bushare.binghamton.edu/assess/Shared SAASI/Data Hub Development/B-Engaged Migration/B-Engaged Dumps/Daily Groups Dump/Groups_dump_", timestamp, ".csv")
-  out_path_members_full <- paste0("//bushare.binghamton.edu/assess/Shared SAASI/Data Hub Development/B-Engaged Migration/B-Engaged Dumps/Daily Members Dump/Members_dump", timestamp, ".csv")
+  out_path_groups <- paste0("//bushare.binghamton.edu/assess/Shared SAASI/Data Hub Development/B-Engaged Migration/B-Engaged Dumps/Daily Groups Dump/Groups_dump_", today, ".csv")
+  out_path_members_full <- paste0("//bushare.binghamton.edu/assess/Shared SAASI/Data Hub Development/B-Engaged Migration/B-Engaged Dumps/Daily Members Dump/Members_dump", today, ".csv")
+  out_path_groups_rds <- paste0("//bushare.binghamton.edu/assess/Shared SAASI/Data Hub Development/B-Engaged Migration/B-Engaged Dumps/Daily Groups Dump RDS/Groups_dump_", today, ".rds")
+  out_path_members_rds <- paste0("//bushare.binghamton.edu/assess/Shared SAASI/Data Hub Development/B-Engaged Migration/B-Engaged Dumps/Daily Members Dump RDS/Members_dump_", today, ".rds")
+  
   
   # --- GET GROUPS ---
   group_url <- "https://bengaged.binghamton.edu/rss_groups?include_deleted=1"
@@ -61,7 +64,8 @@ tryCatch({
   # --- EXPORT FILES ---
   write_csv(groups_df, out_path_groups)
   write_csv(members_joined, out_path_members_full)
-  
+  saveRDS(groups_df, out_path_groups_rds)
+  saveRDS(members_df, out_path_members_rds)
   # --- SUMMARY TABLE FOR EMAIL ---
   summary_table <- members_joined %>%
     count(groupType, name = "Members") %>%
@@ -83,6 +87,8 @@ tryCatch({
       "<p>Files written to:</p><ul>",
       "<li>", out_path_groups, "</li>",
       "<li>", out_path_members_full, "</li>",
+      "<li>", out_path_groups_rds, "</li>",
+      "<li>", out_path_members_rds, "</li>",
       "</ul>",
       summary_html
     )),
